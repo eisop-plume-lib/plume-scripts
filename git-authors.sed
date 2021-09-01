@@ -76,6 +76,7 @@ s/^jwyuan$/Jeff Yuan/
 s/^kelloggm$/Martin Kellogg/
 s/^laurejt$/Laure Thompson/
 s/^leelin$/Lee Lin/
+s/^lnsun$/Lian Sun/
 s/^looser$/Nitin Kumar Das/
 s/^mali$/Mahmood Ali/
 s/^marinov$/Darko Marinov/
@@ -127,6 +128,7 @@ s/^vkm$/Vikash Mansinghka/
 s/^wdietl$/Werner Dietl/
 s/^wmdietl$/Werner Dietl/
 s/^wmdietlGC$/Google Inc.\\ (via @wmdietlGC)/
+s/^xingweitian$/Weitian Xing/
 s/^yoav.zibin$/Yoav Zibin/
 s/^yuriy.brun$/Yuriy Brun/
 s/^zcai$/Zhiping Cai/
