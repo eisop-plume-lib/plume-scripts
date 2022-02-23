@@ -134,6 +134,7 @@ s/^xingweitian$/Weitian Xing/
 s/^yoav.zibin$/Yoav Zibin/
 s/^yuriy.brun$/Yuriy Brun/
 s/^zcai$/Zhiping Cai/
+s/^alex$/Alex Liu/
 s/^zhangjiangqige$/Jiangqi Zhang/
 
 /^daikonbuildtest$/d
