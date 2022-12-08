@@ -65,9 +65,11 @@ s/^gregs$/Greg Sullivan/
 s/^gustavo$/Gustavo Santos/
 s/^hunkim$/Sung Kim/
 s/^iuliuv$/Iuliu Vasilescu/
+s/^Ivan-Kocherhin$/Ivan Kocherhin/
 s/^jaimeq$/Jaime Quinonez/
 s/^jake$/Jake Cockrell/
 s/^jburke$/Jonathan Burke/
+s/^Jck$/Shuqi Lin/
 s/^jhp$/Jeff Perkins/
 s/^jonathangburke$/Jonathan Burke/
 s/^joshkata$/Josh Kataoka/
@@ -76,6 +78,7 @@ s/^juang$/Jeff Yuan/
 s/^jwa$/James Anderson/
 s/^jwnimmer$/Jeremy Nimmer/
 s/^jwyuan$/Jeff Yuan/
+s/^kanaksad$/Kanak Das/
 s/^kelloggm$/Martin Kellogg/
 s/^laurejt$/Laure Thompson/
 s/^leelin$/Lee Lin/
