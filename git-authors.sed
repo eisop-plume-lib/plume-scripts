@@ -138,6 +138,7 @@ s/^wdietl$/Werner Dietl/
 s/^wmdietl$/Werner Dietl/
 s/^wmdietlGC$/Google Inc.\\ (via @wmdietlGC)/
 s/^xingweitian$/Weitian Xing/
+s/^Aosen$/Aosen Xiong/
 s/^yoav.zibin$/Yoav Zibin/
 s/^yuriy.brun$/Yuriy Brun/
 s/^zcai$/Zhiping Cai/
