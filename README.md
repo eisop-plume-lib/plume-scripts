@@ -21,7 +21,7 @@ Then, the scripts are available at `/tmp/$USER/plume-scripts`.
 if [ -d /tmp/$USER/plume-scripts ] ; then
   git -C /tmp/$USER/plume-scripts pull -q > /dev/null 2>&1
 else
-  mkdir -p /tmp/$USER && git -C /tmp/$USER clone --filter=blob:none -q https://github.com/plume-lib/plume-scripts.git
+  mkdir -p /tmp/$USER && git -C /tmp/$USER clone --filter=blob:none -q https://github.com/eisop-plume-lib/plume-scripts.git
 fi
 ```
 
@@ -89,7 +89,7 @@ Prints the SHA commit id corresponding to the most recent successful CI job.
 
 ## Git version control
 
-**The maintained version of these scripts is in https://github.com/plume-lib/git-scripts.
+**The maintained version of these scripts is in https://github.com/eisop-plume-lib/git-scripts.
 The scripts will be removed from the plume-scripts repository in the future.**
 
 ### ediff-merge-script
@@ -105,7 +105,7 @@ Lists all the authors of commits in a git repository.
 ### git-clone-related
 
 This script has been superseded by `git-clone-related`
-in the [git-scripts](https://github.com/plume-lib/git-scripts) repository.
+in the [git-scripts](https://github.com/eisop-plume-lib/git-scripts) repository.
 
 Clones a repository related to the one where this script is called, trying
 to match the fork and branch.
@@ -125,7 +125,7 @@ Here is how to accomplish that:
   if [ -d "/tmp/$USER/plume-scripts" ] ; then
     git -C /tmp/$USER/plume-scripts pull -q > /dev/null 2>&1
   else
-    mkdir -p /tmp/$USER && git -C /tmp/$USER clone --filter=blob:none -q https://github.com/plume-lib/plume-scripts.git
+    mkdir -p /tmp/$USER && git -C /tmp/$USER clone --filter=blob:none -q https://github.com/eisop-plume-lib/plume-scripts.git
   fi
   /tmp/$USER/plume-scripts/git-clone-related codespecs fjalar
 ```
