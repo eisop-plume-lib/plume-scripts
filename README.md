@@ -1,7 +1,7 @@
 # Plume-Scripts:  Scripts for programming and system administration
 
 These scripts automate various programming and sysadmin tasks.
-This project contains utilities for
+This project contains utilities for:
 
  * [Shell scripting](#shell-scripting)
  * [Continuous integration](#continuous-integration)
@@ -21,7 +21,7 @@ Then, the scripts are available at `/tmp/$USER/plume-scripts`.
 if [ -d /tmp/$USER/plume-scripts ] ; then
   git -C /tmp/$USER/plume-scripts pull -q > /dev/null 2>&1
 else
-  mkdir -p /tmp/$USER && git -C /tmp/$USER clone --depth 1 -q https://github.com/plume-lib/plume-scripts.git
+  mkdir -p /tmp/$USER && git -C /tmp/$USER clone --filter=blob:none -q https://github.com/plume-lib/plume-scripts.git
 fi
 ```
 
@@ -99,10 +99,13 @@ A script for use as a git mergetool; runs Emacs ediff as the mergetool.
 
 ### git-authors
 
-Lists all the authors of commits in a get repository.
+Lists all the authors of commits in a git repository.
 [Documentation](git-authors) at top of file.
 
 ### git-clone-related
+
+This script has been superseded by `git-clone-related`
+in the [git-scripts](https://github.com/plume-lib/git-scripts) repository.
 
 Clones a repository related to the one where this script is called, trying
 to match the fork and branch.
@@ -122,7 +125,7 @@ Here is how to accomplish that:
   if [ -d "/tmp/$USER/plume-scripts" ] ; then
     git -C /tmp/$USER/plume-scripts pull -q > /dev/null 2>&1
   else
-    mkdir -p /tmp/$USER && git -C /tmp/$USER clone --depth 1 -q https://github.com/plume-lib/plume-scripts.git
+    mkdir -p /tmp/$USER && git -C /tmp/$USER clone --filter=blob:none -q https://github.com/plume-lib/plume-scripts.git
   fi
   /tmp/$USER/plume-scripts/git-clone-related codespecs fjalar
 ```
@@ -139,17 +142,24 @@ Tests whether a branch exists in a Git repository;
 prints the branch, or prints "master" if the branch does not exist.
 [Documentation](git-find-branch) at top of file.
 
+### resolve-adjacent-conflicts
+
+Edits files in place to resolve git conflicts that arise from edits to
+adjacent lines.
+[Documentation](resolve-adjacent-conflicts) at top of file.
+
+### resolve-blank-lines
+
+Edits files in place to resolve git conflicts that arise from differences in
+blank lines and whitespace.
+[Documentation](resolve-blank-lines) at top of file.
+
 ### resolve-import-conflicts
 
 Edits files in place to resolve git conflicts that arise from Java `import`
 statements.
 [Documentation](resolve-import-conflicts) at top of file.
 
-### resolve-adjacent-conflicts
-
-Edits files in place to resolve git conflicts that arise from edits to
-adjacent lines.
-[Documentation](resolve-adjacent-conflicts) at top of file.
 
 
 ## Search and replace
@@ -164,8 +174,8 @@ if the replacement is performed.
 
 ### search
 
-Jeffrey Friedl's search program combines `find` and `grep`
--- more or less do a 'grep' on a whole directory tree, but is more
+Jeffrey Friedl's `search` program combines `find` and `grep` --
+more or less do a 'grep' on a whole directory tree.  `search` is more
 efficient, uses Perl regular expressions, and is much more powerful.
 This version fixes a tiny bug or two.  For full documentation, see its
 [manpage](search.manpage).

@@ -4,6 +4,9 @@
 ### This script has been moved to the git-scripts repository:
 ### https://github.com/plume-lib/git-scripts
 ###
+echo "Please use $(basename "$0") from https://github.com/plume-lib/git-scripts ."
+echo "You are using $0,"
+echo "which is an obsolete version from https://github.com/plume-lib/plume-scripts ."
 
 # git-clone-related:  clones a repository that is related to this one,
 #   or pulls it if it has already been cloned.
@@ -41,13 +44,16 @@
 #
 # Requires the `jq` program to be installed, when used in Azure Pipelines jobs.
 
+# Do not attempt to add "--filter=blob:none" to the git command, as older git
+# clients (apparently including GitHub, as of 2024-01-27) do not support it.
+
 # Fail if any command fails.
 set +e
 
 if [ "$1" = "--debug" ] ; then
   DEBUG=1
   shift
-  set +x
+  set -x
 fi
 
 # FALLBACK_BRANCH may be unset.
@@ -83,6 +89,10 @@ if [ "$#" -eq 0 ]; then
   set -- -q --single-branch --depth 1
 fi
 
+if [ -n "$DEBUG" ] ; then
+  echo "Entering git-clone-related $UPSTREAM_ORG $REPO_NAME $DESTINATION $*"
+fi
+
 echo "In directory $(pwd) :"
 if [ -d "${DESTINATION}" ]; then
   echo "(cd ${DESTINATION} && git pull -q)"
@@ -93,14 +103,29 @@ if [ -d "${DESTINATION}" ]; then
 else
   SCRIPTDIR="$(cd "$(dirname "$0")" && pwd -P)"
 
+  CI_INFO="$SCRIPTDIR/../plume-scripts/ci-info"
+  if [ ! -f "$CI_INFO" ] ; then
+    CI_INFO="$SCRIPTDIR/../.plume-scripts/ci-info"
+  fi
+  if [ ! -f "$CI_INFO" ] ; then
+    CI_INFO="$SCRIPTDIR/.plume-scripts/ci-info"
+  fi
+  if [ ! -f "$CI_INFO" ] ; then
+    (cd "$SCRIPTDIR" && git clone --depth 1 https://github.com/plume-lib/plume-scripts .plume-scripts)
+  fi
+  if [ ! -f "$CI_INFO" ] ; then
+    echo "CI_INFO does not exist: $CI_INFO"
+    exit 1
+  fi
+
   if [ -n "$DEBUG" ] ; then
     echo "About to run ci-info --debug"
-    "${SCRIPTDIR}/ci-info" --debug "${UPSTREAM_ORG}"
+    "${CI_INFO}" --debug "${UPSTREAM_ORG}"
     echo "Ran ci-info --debug"
     echo "About to run ci-info"
   fi
 
-  eval "$("${SCRIPTDIR}"/ci-info "${UPSTREAM_ORG}")"
+  eval "$("${CI_INFO}" "${UPSTREAM_ORG}")"
   if [ -n "$DEBUG" ] ; then
     echo "Finished running ci-info"
   fi
@@ -128,7 +153,7 @@ else
   fi
   echo "git clone -b ${REPO_BRANCH} $* ${REPO_URL} ${DESTINATION}"
   # Try twice in case of network lossage.
-  git clone -b "${REPO_BRANCH}" "$@" "${REPO_URL}" "${DESTINATION}" \
-    || (sleep 60 && git clone -b "${REPO_BRANCH}" "$@" "${REPO_URL}" "${DESTINATION}")
+  git clone --depth 1 -b "${REPO_BRANCH}" "$@" "${REPO_URL}" "${DESTINATION}" \
+    || (sleep 60 && git clone --depth 1 -b "${REPO_BRANCH}" "$@" "${REPO_URL}" "${DESTINATION}")
 fi
 echo "Done in directory ${DESTINATION} : $(cd "${DESTINATION}" && git rev-parse HEAD)"
