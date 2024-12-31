@@ -247,8 +247,8 @@ elif [ -n "$GITHUB_HEAD_REF" ] ; then
   # GitHub Actions pull request (no special handling is required for non-PR GitHub Actions jobs).
   CI_IS_PULL_REQUEST=true
   CI_BRANCH_NAME="${GITHUB_HEAD_REF}"
-  CI_COMMIT_RANGE_START=$(git rev-parse "${GITHUB_BASE_REF}")
-  CI_COMMIT_RANGE_END=$(git rev-parse "${GITHUB_HEAD_REF}")
+  CI_COMMIT_RANGE_START=$(git rev-parse "remotes/origin/${CI_COMMIT_RANGE_START}")
+  CI_COMMIT_RANGE_END=$(git rev-parse "remotes/pull/${GITHUB_REF_NAME}")
   CI_COMMIT_RANGE="${CI_COMMIT_RANGE_START}...${CI_COMMIT_RANGE_END}"
 
 else
