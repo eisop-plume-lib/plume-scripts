@@ -97,6 +97,8 @@ elif [ -n "$AZURE_HTTP_USER_AGENT" ]; then
   fi
 elif [ -n "$CIRCLE_PR_USERNAME" ]; then
   CI_ORGANIZATION="$CIRCLE_PR_USERNAME"
+elif [ -n "$GITHUB_HEAD_REF" ]; then
+  CI_ORGANIZATION="${GITHUB_ACTOR}"
 fi
 
 ## Git clone
