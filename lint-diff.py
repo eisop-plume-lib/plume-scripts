@@ -7,6 +7,12 @@
 # making the changes globally in your project would be too burdensome.
 # You can make the requirement only for new and changed lines, so your
 # codebase will conform to the new standard gradually, as you edit it.
+#
+# Note: If the warnings output indicates a catastrophic failure of the
+# program that produces warnings, then this program will issue no
+# warnings because there will be no warnings on specific lines.
+# Example:
+#   Exception in thread "main" java.lang.IllegalAccessError
 
 # Usage:  lint-diff.py [options] diff.txt [warnings.txt]
 #         If warnings.txt is omitted, use standard input.
@@ -28,7 +34,7 @@
 #   git -C /tmp/$USER/plume-scripts pull -q > /dev/null 2>&1
 #  else
 #   mkdir -p /tmp/$USER \
-#    && git -C /tmp/$USER clone --filter=blob:none -q https://github.com/plume-lib/plume-scripts.git
+#    && git -C /tmp/$USER clone --depth=1 -q https://github.com/plume-lib/plume-scripts.git
 #  fi
 # (command-that-issues-warnings > /tmp/warnings.txt 2>&1) || true
 # /tmp/$USER/plume-scripts/ci-lint-diff /tmp/warnings.txt
@@ -43,29 +49,35 @@ import argparse
 import os
 import re
 import sys
+from pathlib import Path
+from typing import Any
 
-PROGRAM = os.path.basename(__file__)
+PROGRAM = Path(__file__).name
 
 DEBUG = False
 
 PLUSPLUSPLUS_RE = re.compile(r"\+\+\+ (\S*).*")
 
 # This cannot be multiline because files are read one line at a time.
-FILENAME_LINENO_RE = re.compile("([^:]*):([0-9]+):.*")
+FILENAME_LINENO_RE = re.compile(r"([^:]*):([0-9]+):.*")
 
-INITIAL_WHITESPACE_RE = re.compile("[ \t]")
+INITIAL_WHITESPACE_RE = re.compile(r"[ \t]")
 
 
-def eprint(*args, **kwargs):
+def eprint(*args: object, **kwargs: Any) -> None:
     """Print to stderr."""
     print(*args, file=sys.stderr, **kwargs)
 
 
-def strip_dirs(filename, num_dirs):
-    """Strip off `num_dirs` leading "/" characters."""
+def strip_dirs(filename: str, num_dirs: int) -> str:
+    """Strip off `num_dirs` leading "/" characters.
+
+    Returns:
+        A subdirectory, with `num_dirs` top-level enclosing directories removed.
+    """
     if num_dirs == 0:
         return filename
-    return os.path.join(*(filename.split(os.path.sep)[num_dirs:]))
+    return os.path.join(*(filename.split(os.path.sep)[num_dirs:]))  # noqa: PTH118
 
 
 ## Tests:
@@ -84,11 +96,17 @@ assert strip_dirs("/a/b/c/", 4) == ''
 """
 
 
-def min_strips(filename1, filename2):
-    """Returns a 4-tuple of 2 integers and 2 strings.  The integers
+def min_strips(filename1: str, filename2: str) -> tuple[int, int, str, str]:
+    """Find matching suffixes of the given filenames.
+
+    Returns a 4-tuple of 2 integers and 2 strings.  The integers
     indicate the smallest strip values that make the two filenames equal,
     or a maximal pair if the files have different basenames.  The last two
-    elements of the tuple are the argument strings."""
+    elements of the tuple are the argument strings.
+
+    Returns:
+        A 4-tuple of 2 integers and 2 strings.
+    """
     components1 = filename1.split(os.path.sep)
     components2 = filename2.split(os.path.sep)
     if components1[-1] != components2[-1]:
@@ -112,14 +130,22 @@ assert min_strips("/a/b/c/d", "/e/f/g/h") == (1000, 1000, "/a/b/c/d", "/e/f/g/h"
 """
 
 
-def pair_min(pair1, pair2):
-    """Given two pairs, returns the one that is pointwise lesser in its first two elements.
-    Fails if neither is lesser."""
+def pair_min(
+    pair1: tuple[int, int, str, str], pair2: tuple[int, int, str, str]
+) -> tuple[int, int, str, str]:
+    """Given two tuples, returns the one that is pointwise lesser in its first two elements.
+
+    Fails if neither is lesser.
+
+    Returns:
+        the argument that is pointwise lesser in its first two elements.
+    """
     if pair1[0] <= pair2[0] and pair1[1] <= pair2[1]:
         return pair1
     if pair1[0] >= pair2[0] and pair1[1] >= pair2[1]:
         return pair2
-    raise Exception(f"incomparable pairs: {pair1} {pair2}")
+    msg = f"incomparable pairs: {pair1} {pair2}"
+    raise Exception(msg)
 
 
 ## Tests:
@@ -132,23 +158,31 @@ assert pair_min((40,30,"a","b"), (6,5,"c","d")) == (6,5,"c","d")
 """
 
 
-def diff_filenames(diff_filename):
-    """All the filenames in the given diff file."""
+def diff_filenames(diff_filename: str) -> set[str]:
+    """All the filenames in the given diff file.
+
+    Returns:
+        All the filenames in the given diff file.
+    """
     result = set()
-    with open(diff_filename, encoding="utf-8") as diff:
+    with Path(diff_filename).open(encoding="utf-8") as diff:
         for diff_line in diff:
             match = PLUSPLUSPLUS_RE.match(diff_line)
             if match:
-                filename = match.group(1)
+                filename: str = match.group(1)
                 if filename != "/dev/null":
                     result.add(filename)
     return result
 
 
-def warning_filenames(warning_filename):
-    """All the filenames in the given warning file."""
+def warning_filenames(warning_filename: str) -> set[str]:
+    """All the filenames in the given warning file.
+
+    Returns:
+        All the filenames in the given warning file.
+    """
     result = set()
-    with open(warning_filename, encoding="utf-8") as warnings:
+    with Path(warning_filename).open(encoding="utf-8") as warnings:
         for warning_line in warnings:
             match = FILENAME_LINENO_RE.match(warning_line)
             if match:
@@ -156,9 +190,16 @@ def warning_filenames(warning_filename):
     return result
 
 
-def guess_strip_filenames(diff_filenames, warning_filenames):
-    """Arguments are two lists of file names.
-    Result is a pair of integers."""
+def guess_strip_filenames(
+    diff_filenames: set[str], warning_filenames: set[str]
+) -> tuple[int, int, str, str]:
+    """Match subdirectory structure.
+
+    Arguments are two lists of file names.
+
+    Returns:
+        A pair of integers.
+    """
     result = (1000, 1000, "no files seen yet", "no files seen yet")
     for diff_filename in diff_filenames:
         for warning_filename in warning_filenames:
@@ -166,9 +207,14 @@ def guess_strip_filenames(diff_filenames, warning_filenames):
     return result
 
 
-def guess_strip_files(diff_file, warning_file):
-    """Arguments are files produced by diff and a lint tool, respectively.
-    Result is a pair of integers."""
+def guess_strip_files(diff_file: str, warning_file: str) -> tuple[int, int, str, str]:
+    """Match subdirectory structure.
+
+    Arguments are files produced by diff and a lint tool, respectively.
+
+    Returns:
+        A pair of integers.
+    """
     diff_files = diff_filenames(diff_file)
     warning_files = warning_filenames(warning_file)
     result = guess_strip_filenames(diff_files, warning_files)
@@ -180,7 +226,7 @@ def guess_strip_files(diff_file, warning_file):
         if DEBUG:
             eprint(
                 "lint-diff.py: guess_strip_files all in one subdirectory: "
-                + "result={result} diff_prefix={diff_prefix} warnings_prefix={warnings_prefix}"
+                f"result={result} diff_prefix={diff_prefix} warnings_prefix={warnings_prefix}"
             )
             eprint(f"diff_files={diff_files}")
             eprint(f"warning_files={warning_files}")
@@ -190,8 +236,12 @@ def guess_strip_files(diff_file, warning_file):
 ### Main routine
 
 
-def parse_args():
-    """Parse and return the command-line arguments."""
+def parse_args() -> argparse.Namespace:
+    """Parse and return the command-line arguments.
+
+    Returns:
+        The parsed command-line arguments.
+    """
     global DEBUG
 
     parser = argparse.ArgumentParser(
@@ -244,7 +294,7 @@ def parse_args():
     parser.add_argument(
         "--debug", dest="DEBUG", action="store_true", help="print diagnostic output"
     )
-    parser.add_argument("diff_filename", metavar="diff.txt", default=os.getcwd())
+    parser.add_argument("diff_filename", metavar="diff.txt", default=Path.cwd())
     parser.add_argument("warning_filename", metavar="warnings.txt", default=None)
 
     args = parser.parse_args()
@@ -259,9 +309,7 @@ def parse_args():
         sys.exit(2)
 
     if args.guess_strip and args.warning_filename is None:
-        eprint(
-            PROGRAM, 'needs "warnings.txt" file argument when --guess-strip is provided'
-        )
+        eprint(PROGRAM, 'needs "warnings.txt" file argument when --guess-strip is provided')
         sys.exit(2)
 
     if args.guess_strip:
@@ -277,7 +325,7 @@ def parse_args():
             if DEBUG:
                 eprint(
                     "lint-diff.py inferred "
-                    + f"--strip-diff={args.strip_diff} --strip-warnings={args.strip_warnings}"
+                    f"--strip-diff={args.strip_diff} --strip-warnings={args.strip_warnings}"
                 )
 
     # A filename if the diff filenames start with "a/" and "b/", otherwise None.
@@ -287,13 +335,16 @@ def parse_args():
     return args
 
 
-def changed_lines(args):
-    """Returns a dictionary from file names to a set of ints (line numbers for changed lines)."""
+def changed_lines(args: argparse.Namespace) -> dict[str, set[int]]:
+    """Return a dictionary from file names to a set of ints (line numbers for changed lines).
 
-    changed = {}
+    Returns:
+        a dictionary from file names to a set of ints (line numbers for changed lines).
+    """
+    changed: dict[str, set[int]] = {}
 
-    with open(args.diff_filename, encoding="utf-8") as diff:
-        atat_re = re.compile("@@ -([0-9]+)(,[0-9]+)? \\+([0-9]+)(,[0-9]+)? @@.*")
+    with Path(args.diff_filename).open(encoding="utf-8") as diff:
+        atat_re = re.compile(r"@@ -([0-9]+)(,[0-9]+)? \+([0-9]+)(,[0-9]+)? @@.*")
         # content_re = re.compile("[ +-].*")
 
         filename = ""
@@ -339,9 +390,12 @@ def changed_lines(args):
     return changed
 
 
-def warn_relative_diff(args):
-    """Possibly warn about relative directories."""
+def warn_relative_diff(args: argparse.Namespace) -> bool:
+    """Possibly warn about relative directories.
 
+    Returns:
+        a boolean.
+    """
     result = False
     if args.relative_diff is not None and args.strip_diff == 0:
         # This is usually not an error, so don't warn.
@@ -358,24 +412,21 @@ def warn_relative_diff(args):
         result = True
         if DEBUG:
             eprint(f"lint-diff.py: diff file {args.diff_filename}:")
-            with open(args.diff_filename, "r", encoding="utf-8") as fin:
-                eprint("{}", fin.read())
+            eprint("{}", Path(args.diff_filename).read_text(encoding="utf-8"))
             eprint(f"lint-diff.py: lint file {args.warning_filename}:")
-            with open(args.warning_filename, "r", encoding="utf-8") as fin:
-                eprint("{}", fin.read())
+            eprint("{}", Path(args.warning_filename).read_text(encoding="utf-8"))
             eprint("lint-diff.py: end of input files.")
 
     return result
 
 
-def main():
-    """The main routine"""
-
+def main() -> None:
+    """Filter warnings output, to only show output for changed lines."""
     global DEBUG
 
     args = parse_args()
 
-    # A dictionary from file names to a set of ints (line numbers for changed lines)
+    # A dictionary from file names to a set of ints (line numbers for changed lines).
     changed = changed_lines(args)
 
     if DEBUG:
@@ -390,11 +441,11 @@ def main():
         warnings = sys.stdin
     else:
         # pylint: disable=consider-using-with
-        warnings = open(args.warning_filename, encoding="utf-8")
+        warnings = Path(args.warning_filename).open(encoding="utf-8")  # noqa: SIM115
 
-    # 1 if this produced any output, 0 if not
+    # 1 if this produced any output, 0 if not.
     status = 0
-    # true if we just printed a warning and are looking for continuation lines to print
+    # true if we just printed a warning and are looking for continuation lines to print.
     print_multiline_warning = False
 
     for warning_line in warnings:
@@ -402,6 +453,12 @@ def main():
             print(warning_line, end="")
             continue
         print_multiline_warning = False
+
+        should_output = False
+
+        # Special case for Java exception in the output.
+        if warning_line.startswith("Exception in thread"):
+            should_output = True
 
         match = FILENAME_LINENO_RE.match(warning_line)
         if match:
@@ -430,12 +487,15 @@ def main():
                     relative_diff_warned = True
             lineno = int(match.group(2))
             if filename in changed and lineno in changed[filename]:
-                print(warning_line, end="")
-                status = 1
-                print_multiline_warning = True
+                should_output = True
+
+        if should_output:
+            print(warning_line, end="")
+            status = 1
+            print_multiline_warning = True
 
     if warnings is not sys.stdin:
-        warnings.close
+        warnings.close()
 
     sys.exit(status)
 

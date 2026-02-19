@@ -3,7 +3,10 @@ jobs:
   build:
 
     docker:
-      - image: cimg/python:3.12
+      - image: cimg/python:3.14
+
+    environment:
+      TERM: dumb
 
     steps:
 
@@ -18,15 +21,18 @@ jobs:
           paths:
             - ".git"
 
-      - run: pip install ruff
-      - run: pip install requests
-      - run: sudo apt-get update
-      - run: sudo apt-get -y install shellcheck devscripts
+      - run: sudo apt update
+      - run:
+          name: Install dependencies via apt
+          command: sudo apt -y install devscripts shellcheck shfmt yamllint
+      - run:
+          name: Install uv
+          command: curl -LsSf https://astral.sh/uv/install.sh | sh
 
+      - run: make showvars
       - run: make
 
 workflows:
-  version: 2
   build:
     jobs:
       - build

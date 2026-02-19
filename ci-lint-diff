@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Given a file of warnings, reports only those that are in the diff for the
 # current pull request.  Works for Azure Pipelines, CircleCI, GitHub Actions,
@@ -6,13 +6,12 @@
 # (On CircleCI, it depends on environment variable CIRCLE_COMPARE_URL;
 # see documentation of `ci-info` script for details.)
 
-
 # Example use:
 #
 #   if [ -d /tmp/$USER/plume-scripts ] ; then
 #     git -C /tmp/$USER/plume-scripts pull -q > /dev/null 2>&1
 #   else
-#     mkdir -p /tmp/$USER && git -C /tmp/$USER clone --filter=blob:none -q https://github.com/plume-lib/plume-scripts.git
+#     mkdir -p /tmp/$USER && git -C /tmp/$USER clone --depth=1 -q https://github.com/plume-lib/plume-scripts.git
 #   fi
 #   (command-that-issues-warnings > /tmp/warnings.txt 2>&1) || true
 #   /tmp/$USER/plume-scripts/ci-lint-diff /tmp/warnings.txt
@@ -25,21 +24,24 @@
 #
 # Requires the `jq` program to be installed, when used in Azure Pipelines jobs.
 
+SCRIPT_DIR="$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd -P)"
+SCRIPT_NAME="$(basename -- "$0")"
+
 DEBUG=""
 
-if [ "$#" -eq 0 ] ; then
-  echo "Usage: $0 [--debug] WARNINGS-FILE" >&2
+if [ "$#" -eq 0 ]; then
+  echo "Usage: ${SCRIPT_NAME} [--debug] WARNINGS-FILE" >&2
   exit 2
 fi
-if [ "$1" = "--debug" ] ; then
-    DEBUG="--debug"
-    shift
+if [ "$1" = "--debug" ]; then
+  DEBUG="--debug"
+  shift
 fi
-if [ "$#" -ne 1 ] ; then
-  echo "Usage: $0 [--debug] WARNINGS-FILE" >&2
+if [ "$#" -ne 1 ]; then
+  echo "Usage: ${SCRIPT_NAME} [--debug] WARNINGS-FILE" >&2
   exit 2
 fi
-if ! [ -f "$1" ] ; then
+if ! [ -f "$1" ]; then
   echo "File $1 does not exist" >&2
   exit 2
 fi
@@ -47,40 +49,58 @@ WARNINGSFILE=$1
 
 set -e
 
-if [ "$DEBUG" = "--debug" ] ; then
+if [ "$DEBUG" = "--debug" ]; then
   env | sort
   git log --graph | head --lines=10000
 fi
 
-SCRIPTDIR="$( cd "$(dirname "$0")" ; pwd -P )"
-
-eval "$("${SCRIPTDIR}"/ci-info)"
-
-
-# Ensure the commits mentioned in $CI_COMMIT_RANGE are available.
-if ! git cat-file -e "${CI_COMMIT_RANGE_START}^{commit}" ; then
-  CI_LINT_DIFF_ERROR="Commit CI_COMMIT_RANGE_START=$CI_COMMIT_RANGE_START not found; clone more deeply."
+ci_info_output="$("${SCRIPT_DIR}"/ci-info)"
+ci_info_status_code=$?
+if [ "$ci_info_status_code" -ne 0 ]; then
+  echo "ci-info failed with status $ci_info_status_code"
+  echo "---- ci-info output ----"
+  echo "$ci_info_output"
+  echo "---- end of ci-info output ----"
+  exit 2
 fi
-if ! git cat-file -e "${CI_COMMIT_RANGE_END}^{commit}" ; then
-  CI_LINT_DIFF_ERROR="Commit CI_COMMIT_RANGE_END=$CI_COMMIT_RANGE_END not found; clone more deeply."
+
+eval "$ci_info_output"
+
+if [ -z "$CI_COMMIT_RANGE" ]; then
+  CI_LINT_DIFF_ERROR+="CI_COMMIT_RANGE is not set.\n"
+else
+  if [ -z "$CI_COMMIT_RANGE_START" ]; then
+    CI_LINT_DIFF_ERROR+="CI_COMMIT_RANGE_START is not set.\n"
+  else
+    if ! git cat-file -e "${CI_COMMIT_RANGE_START}^{commit}"; then
+      CI_LINT_DIFF_ERROR+="Commit CI_COMMIT_RANGE_START=$CI_COMMIT_RANGE_START not found; clone more deeply.\n"
+    fi
+  fi
+  if [ -z "$CI_COMMIT_RANGE_END" ]; then
+    CI_LINT_DIFF_ERROR+="CI_COMMIT_RANGE_END is not set.\n"
+  else
+    if ! git cat-file -e "${CI_COMMIT_RANGE_END}^{commit}"; then
+      CI_LINT_DIFF_ERROR+="Commit CI_COMMIT_RANGE_END=$CI_COMMIT_RANGE_END not found; clone more deeply.\n"
+    fi
+  fi
 fi
 
 set +e
 diff_file=$(mktemp /tmp/diff-XXXXXX.txt)
-echo "git diff $CI_COMMIT_RANGE > $diff_file"
+echo "echo ${SCRIPT_NAME} running: git diff $CI_COMMIT_RANGE > $diff_file"
 git --no-pager diff --exit-code "$CI_COMMIT_RANGE" > "$diff_file" 2>&1
 git_status=$?
-if [ $git_status -gt 1 ] ; then
-  CI_LINT_DIFF_ERROR="git diff exited with status $git_status"
-  cat "$diff_file"
-  git --no-pager diff --exit-code "$CI_COMMIT_RANGE"
-  git --no-pager branch -a
-  git --no-pager diff "$CI_COMMIT_RANGE"
-elif [ ! -r "$diff_file" ] ; then
-  CI_LINT_DIFF_ERROR="$diff_file does not exist"
+if [ $git_status -gt 1 ]; then
+  CI_LINT_DIFF_ERROR+="git diff exited with status $git_status"
+  sed -e 's/^/echo /' "$diff_file"
+  git --no-pager diff --exit-code "$CI_COMMIT_RANGE" | sed -e 's/^/echo /'
+  git --no-pager branch -a | sed -e 's/^/echo /'
+  git --no-pager diff "$CI_COMMIT_RANGE" | sed -e 's/^/echo /'
+elif [ ! -r "$diff_file" ]; then
+  CI_LINT_DIFF_ERROR+="$diff_file does not exist"
 fi
-if [ ! -s "$diff_file" ] ; then
-  CI_LINT_DIFF_ERROR="ERROR: Empty diff for $CI_COMMIT_RANGE.
+if [ ! -s "$diff_file" ]; then
+  CI_LINT_DIFF_ERROR+="ERROR: Empty diff for $CI_COMMIT_RANGE.
 Try pulling base branch (often main or master) into compare branch (often your feature branch).
 Other causes of an empty diff include:
   * The commit range is a no-op, such as a commit and its revert.
@@ -89,20 +109,21 @@ Other causes of an empty diff include:
 "
 fi
 
-if [ -n "$CI_LINT_DIFF_ERROR" ] ; then
+if [ -n "$CI_LINT_DIFF_ERROR" ]; then
   echo
   echo "*****"
+  echo "${SCRIPT_NAME} error:"
   echo "$CI_LINT_DIFF_ERROR"
   echo "*****"
-  echo 
-  echo "This command will print diagnostic information, then exit."
+  echo
+  echo "${SCRIPT_NAME} will print diagnostic information, then exit."
   echo
 
   # This is not very effective because environment variables were set by
   # the previous invocation of ci-info.
-  echo "${SCRIPTDIR}"/ci-info --debug
-  "${SCRIPTDIR}"/ci-info --debug
-  echo end of "${SCRIPTDIR}"/ci-info --debug
+  echo "---------------- start of ${SCRIPT_DIR}/ci-info --debug"
+  "${SCRIPT_DIR}"/ci-info --debug
+  echo "---------------- end of ${SCRIPT_DIR}/ci-info --debug"
   echo
 
   echo git rev-parse \$CI_COMMIT_RANGE_START
@@ -151,27 +172,31 @@ if [ -n "$CI_LINT_DIFF_ERROR" ] ; then
   echo "Current directory:"
   pwd
   echo
-  echo "Contents of /tmp:"
+  echo "Listing of /tmp:"
   ls -l /tmp/
+  echo
+  echo "Contents of /tmp:"
+  cat more /tmp/*
   echo
   echo "Environment:"
   env | sort
   echo
   echo "*****"
+  echo "${SCRIPT_NAME} error:"
   echo "$CI_LINT_DIFF_ERROR"
   echo "*****"
   exit 2
 fi
 
-if [ "$DEBUG" = "--debug" ] ; then
-    echo "warnings file $WARNINGSFILE:"
-    cat "$WARNINGSFILE"
-    echo "end of warnings file $WARNINGSFILE."
-    echo "$diff_file file:"
-    cat "$diff_file"
-    echo "end of $diff_file file."
+if [ "$DEBUG" = "--debug" ]; then
+  echo "warnings file $WARNINGSFILE:"
+  cat "$WARNINGSFILE"
+  echo "end of warnings file $WARNINGSFILE."
+  echo "$diff_file file:"
+  cat "$diff_file"
+  echo "end of $diff_file file."
 fi
 
 set -e
 
-"${SCRIPTDIR}"/lint-diff.py $DEBUG --guess-strip "$diff_file" "$WARNINGSFILE"
+"${SCRIPT_DIR}"/lint-diff.py $DEBUG --guess-strip "$diff_file" "$WARNINGSFILE"

@@ -106,9 +106,9 @@ sub collect {
     # print STDERR "-f $fullname = $result\n";
   }
   # Never consider version control directories.
-  # (This needs to be documented and customizable.)
+  # TODO: Document this and make it customizable.
   if ((-d $fullname)
-      && ($_ =~ /^(\.bzr|CVS|\.git|\.hg|\.svn)$/)) {
+      && ($_ =~ /^(\.bzr|CVS|\.git|\.gradle|\.hg|\.svn)$/)) {
     $File::Find::prune = 1;
   }
   if ((-f $fullname)
@@ -134,6 +134,7 @@ for my $arg (@ARGV) {
   if ($arg eq ".") { $arg = $pwd; }
   $arg =~ s|^\./|$pwd/|;
   # Occurrences of abs_path() are because -f doesn't work on relative paths.
+  # It also prevents `perl -i` from converting a symbolic link to a copy of the linked-to file.
   if (-d $arg) {
     find(\&collect, abs_path($arg));
   } elsif (-f abs_path($arg)) {
@@ -150,6 +151,10 @@ if ($debug) {
 foreach my $file (@filelist) {
   if ($debug) {
     print STDERR "file: <<$file>>\n";
+  }
+  # TODO: Document this and make it customizable.
+  if ($file =~ /\.(class|pyc)$/) {
+    next;
   }
   if (! open(SEARCH, $file)) {
     print STDERR "Can't open file $file for read: $!\n";
@@ -168,7 +173,9 @@ foreach my $file (@filelist) {
     # Should rewrite in perl rather than invoking external command, I suppose.
     my $delimiter;
     my $fromtoregex = $fromregex . $toregex;
-    if ($fromtoregex !~ m|/|) {
+    if ($fromtoregex =~ m/'/) {
+      die "arguments to preplace cannot contain single-quote marks";
+    } elsif ($fromtoregex !~ m|/|) {
       $delimiter = "/";
     } elsif ($fromtoregex !~ m/\|/) {
       $delimiter = "|";

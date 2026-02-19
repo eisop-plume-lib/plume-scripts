@@ -20,7 +20,6 @@ if [ -s $BODY ]; then
 fi
 rm -f $BODY
 
-
 ## Testing
 ## This should produce no error
 # echo -n "" | mail-e -invalidoption

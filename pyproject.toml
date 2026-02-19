@@ -1,0 +1,15 @@
+[project]
+name = "plume-scripts"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.32.5",
+]
+
+[dependency-groups]
+dev = [
+    "pymarkdownlnt>=0.9.33",
+    "ty>=0.0.1a31",
+]
