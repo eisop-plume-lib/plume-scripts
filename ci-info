@@ -25,7 +25,7 @@
 #
 # For example use, see comments in file `ci-lint-diff` in this directory.
 #
-# Requires the `jq` program to be installed, when used in Azure Pipelines jobs.
+# Requires the `jq` program in Azure Pipelines and GitHub Actions pull request jobs.
 #
 # If environment variable GITHUB_PAT is set when this script is called, it is
 # used as GitHub Personal Access Token when making GitHub API calls.  This can
@@ -130,7 +130,7 @@ elif [ -n "$AZURE_HTTP_USER_AGENT" ]; then
 elif [ -n "$CIRCLE_PR_USERNAME" ]; then
   CI_ORGANIZATION="$CIRCLE_PR_USERNAME"
 elif [ -n "$GITHUB_HEAD_REF" ]; then
-  CI_ORGANIZATION="${GITHUB_ACTOR}"
+  CI_ORGANIZATION=$(jq -r '.pull_request.head.repo.owner.login // empty' "$GITHUB_EVENT_PATH")
 fi
 
 ## Git clone
