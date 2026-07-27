@@ -130,6 +130,8 @@ elif [ -n "$AZURE_HTTP_USER_AGENT" ]; then
 elif [ -n "$CIRCLE_PR_USERNAME" ]; then
   CI_ORGANIZATION="$CIRCLE_PR_USERNAME"
 elif [ -n "$GITHUB_HEAD_REF" ]; then
+  # GITHUB_ACTOR is the user who triggered the workflow and might not own the
+  # pull request's head repository, so obtain its owner from the event data.
   CI_ORGANIZATION=$(jq -r '.pull_request.head.repo.owner.login // empty' "$GITHUB_EVENT_PATH")
 fi
 
