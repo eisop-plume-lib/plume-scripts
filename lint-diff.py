@@ -135,17 +135,25 @@ def pair_min(
 ) -> tuple[int, int, str, str]:
     """Given two tuples, returns the one that is pointwise lesser in its first two elements.
 
-    Fails if neither is lesser.
+    If neither is pointwise lesser, returns the one with the smaller sum of its first two
+    elements, and if the sums are equal, the one that is lesser by its file names.  Two
+    incomparable pairs arise when two files only share a basename (for example two files
+    named NonNull.java in different directories), and the result must not depend on the order
+    in which the pairs are compared, which varies from run to run because the caller iterates
+    over sets of strings.  A genuine match has fewer unmatched directories on both sides than a
+    basename-only match, so it is lesser than both of them, and the final result is the same
+    for every order.
 
     Returns:
-        the argument that is pointwise lesser in its first two elements.
+        the lesser argument.
     """
     if pair1[0] <= pair2[0] and pair1[1] <= pair2[1]:
         return pair1
     if pair1[0] >= pair2[0] and pair1[1] >= pair2[1]:
         return pair2
-    msg = f"incomparable pairs: {pair1} {pair2}"
-    raise Exception(msg)
+    key1 = (pair1[0] + pair1[1], pair1[2], pair1[3])
+    key2 = (pair2[0] + pair2[1], pair2[2], pair2[3])
+    return pair1 if key1 <= key2 else pair2
 
 
 ## Tests:
@@ -155,6 +163,10 @@ assert pair_min((3,4,"a","b"), (5,6,"c","d")) == (3,4,"a","b")
 assert pair_min((4,3,"a","b"), (6,5,"c","d")) == (4,3,"a","b")
 assert pair_min((30,40,"a","b"), (5,6,"c","d")) == (5,6,"c","d")
 assert pair_min((40,30,"a","b"), (6,5,"c","d")) == (6,5,"c","d")
+assert pair_min((3,9,"a","b"), (8,2,"c","d")) == (8,2,"c","d")
+assert pair_min((8,2,"c","d"), (3,9,"a","b")) == (8,2,"c","d")
+assert pair_min((4,6,"a","b"), (6,4,"c","d")) == (4,6,"a","b")
+assert pair_min((6,4,"c","d"), (4,6,"a","b")) == (4,6,"a","b")
 """
 
 
